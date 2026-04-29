@@ -7,7 +7,9 @@ export interface Task {
   title: string
   description: string
   status: TaskStatus
+  isPinned: boolean
   dueDate?: string
+  pinnedAt?: string
   createdAt: string
   updatedAt: string
 }
@@ -25,6 +27,7 @@ export interface GetTaskListParams {
   keyword?: string
   dueDateStart?: string
   dueDateEnd?: string
+  createdAtDate?: string
 }
 
 export interface GetTaskListResult {
@@ -54,5 +57,7 @@ export const taskApi = {
   getList: (params: GetTaskListParams) => http.post<any, GetTaskListResult>('/task/get-list', params),
   create: (params: CreateTaskParams) => http.post<any, Task>('/task/create', params),
   update: (params: UpdateTaskParams) => http.post<any, Task>('/task/update', params),
-  delete: (id: string) => http.post('/task/delete', { id })
+  delete: (id: string) => http.post('/task/delete', { id }),
+  togglePin: (id: string) => http.post<any, Task>('/task/toggle-pin', { id }),
+  getContribution: () => http.post<any, Record<string, number>>('/task/get-contribution')
 }
