@@ -12,9 +12,11 @@ export interface TaskDocument extends Document {
   description: string // 任务描述
   status: TaskStatus // 任务状态
   userId: Types.ObjectId // 所属用户ID
+  isPinned: boolean // 是否置顶
   createdAt: Date
   updatedAt: Date
   dueDate?: Date // 截止日期（可选）
+  pinnedAt?: Date // 置顶时间（可选）
   deletedAt?: Date // 软删除时间（可选）
 }
 
@@ -32,8 +34,14 @@ export class Task {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   userId: Types.ObjectId
 
+  @Prop({ default: false })
+  isPinned: boolean
+
   @Prop({ default: null })
   dueDate: Date
+
+  @Prop({ default: null })
+  pinnedAt: Date
 
   @Prop({ default: null })
   deletedAt: Date

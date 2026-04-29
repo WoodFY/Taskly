@@ -4,6 +4,7 @@ import { CreateTaskDto } from './dto/create-task.dto'
 import { GetTaskListDto } from './dto/get-task-list.dto'
 import { UpdateTaskDto } from './dto/update-task.dto'
 import { DeleteTaskDto } from './dto/delete-task.dto'
+import { TogglePinDto } from './dto/toggle-pin.dto'
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard'
 
 @UseGuards(JwtAuthGuard)
@@ -29,5 +30,15 @@ export class TaskController {
   @Post('delete')
   delete(@Request() req: any, @Body() dto: DeleteTaskDto) {
     return this.taskService.delete(req.user.userId, dto.id)
+  }
+
+  @Post('toggle-pin')
+  togglePin(@Request() req: any, @Body() dto: TogglePinDto) {
+    return this.taskService.togglePin(req.user.userId, dto.id)
+  }
+
+  @Post('get-contribution')
+  getContribution(@Request() req: any) {
+    return this.taskService.getContribution(req.user.userId)
   }
 }
