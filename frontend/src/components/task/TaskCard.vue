@@ -11,11 +11,12 @@
   const emit = defineEmits<{
     edit: [task: Task]
     delete: [id: string]
+    pin: [id: string]
   }>()
 </script>
 
 <template>
-  <div class="task-card card">
+  <div :class="['task-card', 'card', { 'is-pinned': task.isPinned }]">
     <div class="task-card__header">
       <h3
         class="task-card__title"
@@ -41,6 +42,21 @@
         {{ new Date(task.dueDate).toLocaleDateString() }}
       </span>
       <div class="task-card__actions">
+        <button
+          :class="['action-btn', 'action-btn--pin', { 'is-active': task.isPinned }]"
+          :title="task.isPinned ? t('task.unpin') : t('task.pin')"
+          @click.stop="emit('pin', task._id)"
+        >
+          <svg
+            viewBox="0 0 20 20"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M9.828 3a1 1 0 0 1 .707.293l5.172 5.172a1 1 0 0 1 0 1.414l-.707.707a1 1 0 0 1-1.32.083L12.5 9.207l-2.086 4.172a1 1 0 0 1-1.664.22L7.086 11.5 4.5 14.086a.5.5 0 0 1-.707-.707l2.586-2.586-2.099-1.664a1 1 0 0 1 .22-1.664L8.672 5.38 7.293 4A1 1 0 0 1 8 2.586L9.828 3Z"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
         <button
           class="action-btn"
           @click="emit('edit', task)"
@@ -84,6 +100,11 @@
 
     &:hover {
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    &.is-pinned {
+      border-color: fade(@primary-color, 30%);
+      background-color: fade(@primary-color, 2%);
     }
 
     &__header {
@@ -153,6 +174,10 @@
 
     &:hover {
       background-color: @bg-color;
+      color: @primary-color;
+    }
+
+    &--pin.is-active {
       color: @primary-color;
     }
 

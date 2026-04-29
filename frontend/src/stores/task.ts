@@ -46,10 +46,15 @@ export const useTaskStore = defineStore('task', () => {
     fetchList()
   }
 
+  async function togglePin(id: string) {
+    await taskApi.togglePin(id)
+    await fetchList()
+  }
+
   function resetFilter() {
     filter.value = { page: 1, pageSize: 10 }
     fetchList()
   }
 
-  return { list, total, isLoading, stats, filter, fetchList, createTask, updateTask, deleteTask, setFilter, setPage, resetFilter }
+  return { list, total, isLoading, stats, filter, fetchList, createTask, updateTask, deleteTask, togglePin, setFilter, setPage, resetFilter }
 })

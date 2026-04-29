@@ -19,7 +19,7 @@ export class TaskService {
   }
 
   async getList(userId: string, dto: GetTaskListDto) {
-    const { page = 1, pageSize = 10, status, keyword, dueDateStart, dueDateEnd } = dto
+    const { page = 1, pageSize = 10, status, keyword, dueDateStart, dueDateEnd, createdAtDate } = dto
 
     const filter: any = {
       userId: new Types.ObjectId(userId),
@@ -41,14 +41,20 @@ export class TaskService {
       if (dueDateEnd) filter.dueDate.$lte = new Date(dueDateEnd)
     }
 
+    if (createdAtDate) {
+      const dayStart = new Date(createdAtDate)
+      const dayEnd = new Date(createdAtDate)
+      dayEnd.setDate(dayEnd.getDate() + 1)
+      filter.createdAt = { $gte: dayStart, $lt: dayEnd }
+    }
+
     const total = await this.taskModel.countDocuments(filter)
     const list = await this.taskModel
       .find(filter)
-      .sort({ createdAt: -1 })
+      .sort({ isPinned: -1, pinnedAt: 1, createdAt: -1 }) // 置顶优先，同为置顶按 pinnedAt 升序
       .skip((page - 1) * pageSize)
       .limit(pageSize)
 
-    // 统计各状态数量
     const stats = await this.taskModel.aggregate([
       { $match: { userId: new Types.ObjectId(userId), deletedAt: null } },
       { $group: { _id: '$status', count: { $sum: 1 } } }
@@ -100,5 +106,45 @@ export class TaskService {
 
     task.deletedAt = new Date()
     await task.save()
+  }
+
+  async togglePin(userId: string, id: string) {
+    const task = await this.taskModel.findOne({
+      _id: id,
+      userId: new Types.ObjectId(userId),
+      deletedAt: null
+    })
+    if (!task) throw new DefaultException('task not found')
+
+    task.isPinned = !task.isPinned
+    task.pinnedAt = task.isPinned ? new Date() : undefined
+    return task.save()
+  }
+
+  async getContribution(userId: string) {
+    const since = new Date()
+    since.setFullYear(since.getFullYear() - 1)
+
+    const result = await this.taskModel.aggregate([
+      {
+        $match: {
+          userId: new Types.ObjectId(userId),
+          deletedAt: null,
+          createdAt: { $gte: since }
+        }
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+          count: { $sum: 1 }
+        }
+      }
+    ])
+
+    const data: Record<string, number> = {}
+    result.forEach(item => {
+      data[item._id] = item.count
+    })
+    return data
   }
 }

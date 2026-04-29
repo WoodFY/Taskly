@@ -30,4 +30,8 @@ export class GetTaskListDto {
   @IsOptional()
   @IsDateString()
   dueDateEnd?: string
+
+  @IsOptional()
+  @IsDateString()
+  createdAtDate?: string // 按创建日期精确筛选（点击日历格子时使用）
 }

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-  import { ref, reactive, watch } from 'vue'
+  import { ref, reactive, computed, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import type { Task, TaskStatus } from '@/api/task'
 
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
 
   const props = defineProps<{
     isVisible: boolean
@@ -16,6 +16,7 @@
   }>()
 
   const isLoading = ref(false)
+  const dueDateError = ref('')
   const form = reactive({
     title: '',
     description: '',
@@ -23,9 +24,24 @@
     dueDate: ''
   })
 
+  const todayStr = computed(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  })
+
+  const createdAtFormatted = computed(() => {
+    if (!props.task?.createdAt) return ''
+    return new Date(props.task.createdAt).toLocaleDateString(locale.value, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  })
+
   watch(
     () => props.task,
     task => {
+      dueDateError.value = ''
       if (task) {
         form.title = task.title
         form.description = task.description ?? ''
@@ -44,6 +60,12 @@
   const statusOptions: TaskStatus[] = ['pending', 'in_progress', 'completed']
 
   async function handleSubmit() {
+    // 创建模式下校验截止日期不得早于今天
+    if (!props.task && form.dueDate && form.dueDate < todayStr.value) {
+      dueDateError.value = t('task.dueDateError')
+      return
+    }
+    dueDateError.value = ''
     isLoading.value = true
     try {
       emit('submit', { ...form })
@@ -115,7 +137,21 @@
               v-model="form.dueDate"
               type="date"
               class="input"
+              :min="!task ? todayStr : undefined"
+              @change="dueDateError = ''"
             />
+            <span
+              v-if="dueDateError"
+              class="field-error"
+            >{{ dueDateError }}</span>
+          </div>
+
+          <div
+            v-if="task"
+            class="form-meta"
+          >
+            <span class="form-meta__label">{{ t('task.createdAt') }}</span>
+            <span class="form-meta__value">{{ createdAtFormatted }}</span>
           </div>
 
           <div class="modal-panel__actions">
@@ -196,6 +232,33 @@
     textarea.input {
       resize: vertical;
       min-height: 80px;
+    }
+  }
+
+  .field-error {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #b91c1c;
+  }
+
+  .form-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid @border-color;
+
+    &__label {
+      font-size: 12px;
+      color: @text-secondary;
+    }
+
+    &__value {
+      font-size: 13px;
+      color: @text-color;
+      font-weight: 500;
     }
   }
 </style>
