@@ -51,7 +51,7 @@ export class TaskService {
     const total = await this.taskModel.countDocuments(filter)
     const list = await this.taskModel
       .find(filter)
-      .sort({ isPinned: -1, pinnedAt: 1, createdAt: -1 }) // 置顶优先，同为置顶按 pinnedAt 升序
+      .sort({ isPinned: -1, pinnedAt: 1, createdAt: 1 }) // 置顶优先，非置顶按创建时间升序
       .skip((page - 1) * pageSize)
       .limit(pageSize)
 
