@@ -39,8 +39,9 @@
   })
 
   watch(
-    () => props.task,
-    task => {
+    [() => props.isVisible, () => props.task],
+    ([isVisible, task]) => {
+      if (!isVisible) return
       dueDateError.value = ''
       if (task) {
         form.title = task.title
@@ -53,8 +54,7 @@
         form.status = 'pending'
         form.dueDate = ''
       }
-    },
-    { immediate: true }
+    }
   )
 
   const statusOptions: TaskStatus[] = ['pending', 'in_progress', 'completed']
