@@ -1,0 +1,59 @@
+{
+  "nav": {
+    "tasks": "Tasks",
+    "logout": "Logout"
+  },
+  "auth": {
+    "login": "Sign In",
+    "register": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "emailPlaceholder": "Enter your email",
+    "passwordPlaceholder": "Enter your password (min 6 chars)",
+    "loginBtn": "Sign In",
+    "registerBtn": "Sign Up",
+    "switchToRegister": "Don't have an account? Sign Up",
+    "switchToLogin": "Already have an account? Sign In"
+  },
+  "task": {
+    "title": "Task Title",
+    "description": "Description",
+    "status": "Status",
+    "dueDate": "Due Date",
+    "createTask": "New Task",
+    "editTask": "Edit Task",
+    "deleteTask": "Delete",
+    "saveTask": "Save",
+    "cancel": "Cancel",
+    "confirmDelete": "Are you sure you want to delete this task?",
+    "titlePlaceholder": "Enter task title",
+    "descPlaceholder": "Enter task description (optional)",
+    "noTasks": "No tasks yet. Create your first task!",
+    "status_pending": "Pending",
+    "status_in_progress": "In Progress",
+    "status_completed": "Completed"
+  },
+  "filter": {
+    "allStatus": "All Status",
+    "keyword": "Search",
+    "keywordPlaceholder": "Search by title or description",
+    "dueDateStart": "Due Date From",
+    "dueDateEnd": "Due Date To",
+    "reset": "Reset"
+  },
+  "stats": {
+    "total": "Total",
+    "completed": "Completed",
+    "completionRate": "Completion Rate"
+  },
+  "pagination": {
+    "prev": "Previous",
+    "next": "Next",
+    "total": "Total {total} items"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "success": "Success"
+  }
+}

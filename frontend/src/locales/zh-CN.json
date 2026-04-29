@@ -1,0 +1,59 @@
+{
+  "nav": {
+    "tasks": "任务",
+    "logout": "退出登录"
+  },
+  "auth": {
+    "login": "登录",
+    "register": "注册",
+    "email": "邮箱",
+    "password": "密码",
+    "emailPlaceholder": "请输入邮箱",
+    "passwordPlaceholder": "请输入密码（至少6位）",
+    "loginBtn": "登录",
+    "registerBtn": "注册",
+    "switchToRegister": "没有账号？立即注册",
+    "switchToLogin": "已有账号？立即登录"
+  },
+  "task": {
+    "title": "任务标题",
+    "description": "任务描述",
+    "status": "状态",
+    "dueDate": "截止日期",
+    "createTask": "新建任务",
+    "editTask": "编辑任务",
+    "deleteTask": "删除",
+    "saveTask": "保存",
+    "cancel": "取消",
+    "confirmDelete": "确认删除该任务？",
+    "titlePlaceholder": "请输入任务标题",
+    "descPlaceholder": "请输入任务描述（可选）",
+    "noTasks": "暂无任务，点击新建任务开始吧！",
+    "status_pending": "待处理",
+    "status_in_progress": "进行中",
+    "status_completed": "已完成"
+  },
+  "filter": {
+    "allStatus": "全部状态",
+    "keyword": "搜索",
+    "keywordPlaceholder": "按标题或描述搜索",
+    "dueDateStart": "截止日期起",
+    "dueDateEnd": "截止日期止",
+    "reset": "重置"
+  },
+  "stats": {
+    "total": "总任务",
+    "completed": "已完成",
+    "completionRate": "完成率"
+  },
+  "pagination": {
+    "prev": "上一页",
+    "next": "下一页",
+    "total": "共 {total} 条"
+  },
+  "common": {
+    "loading": "加载中...",
+    "error": "操作失败",
+    "success": "操作成功"
+  }
+}
