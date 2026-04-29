@@ -97,6 +97,10 @@
 
   .task-card {
     transition: @transition;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
 
     &:hover {
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
@@ -120,6 +124,10 @@
       font-weight: 600;
       cursor: pointer;
       flex: 1;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
 
       &:hover {
         color: @primary-color;
@@ -131,6 +139,7 @@
       color: @text-secondary;
       margin-bottom: 12px;
       line-height: 1.6;
+      flex: 1;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
@@ -141,6 +150,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      margin-top: auto;
     }
 
     &__due {

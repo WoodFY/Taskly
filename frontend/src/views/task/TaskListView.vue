@@ -353,6 +353,7 @@
     &__item {
       flex: 0 0 280px;
       min-width: 0;
+      display: flex;
     }
   }
 
