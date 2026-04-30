@@ -263,6 +263,7 @@
 
     &__input {
       width: 130px;
+      height: 31px;
       padding: 6px 8px;
       border: 1px solid @border-color;
       border-radius: @border-radius;
