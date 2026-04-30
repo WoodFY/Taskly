@@ -462,6 +462,7 @@
   .task-list-area {
     transition: opacity 0.25s ease;
     min-height: 140px; // 固定区域高度，防止加载前后布局抖动
+    margin-bottom: 5px;
 
     &.is-loading {
       opacity: 0.45;
@@ -487,6 +488,7 @@
     overflow-x: auto;
     padding-bottom: 8px;
     margin-bottom: 0;
+    min-height: 130px; // 与任务卡最大高度对齐，避免空状态/骨架态撑高行区域
 
     // 自定义滚动条
     &::-webkit-scrollbar {
@@ -513,8 +515,10 @@
   }
 
   .task-empty {
-    text-align: center;
-    padding: 60px 0;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: @text-secondary;
     font-size: 15px;
   }
