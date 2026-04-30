@@ -461,8 +461,7 @@
 
   .task-list-area {
     transition: opacity 0.25s ease;
-    min-height: 140px; // 固定区域高度，防止加载前后布局抖动
-    margin-bottom: 5px;
+    margin-bottom: 20px;
 
     &.is-loading {
       opacity: 0.45;
@@ -486,9 +485,10 @@
     flex-wrap: nowrap;
     gap: 12px;
     overflow-x: auto;
-    padding-bottom: 8px;
+    overflow-y: hidden;
+    padding-bottom: 18px;
     margin-bottom: 0;
-    min-height: 130px; // 与任务卡最大高度对齐，避免空状态/骨架态撑高行区域
+    height: @task-card-height + 18px; // card + gap(10px) + scrollbar(8px)
 
     // 自定义滚动条
     &::-webkit-scrollbar {
@@ -521,6 +521,20 @@
     justify-content: center;
     color: @text-secondary;
     font-size: 15px;
+  }
+
+  .task-skeleton {
+    height: @task-card-height;
+    padding: 0;
+    border-radius: @border-radius;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.4s infinite;
+  }
+
+  @keyframes skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
   }
 
   .pagination {

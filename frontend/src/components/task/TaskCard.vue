@@ -35,12 +35,7 @@
       <span :class="['badge', `badge-${task.status}`]">{{ t(`task.status_${task.status}`) }}</span>
     </div>
 
-    <p
-      v-if="task.description"
-      class="task-card__desc"
-    >
-      {{ task.description }}
-    </p>
+    <p class="task-card__desc">{{ task.description }}</p>
 
     <div class="task-card__footer">
       <span
@@ -108,8 +103,8 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    height: 100%;
-    padding: 20px 16px;
+    height: @task-card-height;
+    padding: 12px 14px;
 
     &:hover {
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
@@ -130,8 +125,8 @@
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      margin-bottom: 8px;
-      min-height: 24px; // 固定最小高度，防止选中时撑高
+      margin-bottom: 6px;
+      min-height: 24px;
     }
 
     &__checkbox {
@@ -161,13 +156,12 @@
     &__desc {
       font-size: 13px;
       color: @text-secondary;
-      margin-bottom: 12px;
-      line-height: 1.6;
-      flex: 1;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
+      margin-bottom: 6px;
+      line-height: 1.5;
+      height: 20px;
+      white-space: nowrap;
       overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     &__footer {
