@@ -7,9 +7,11 @@
   import TaskForm from '@/components/task/TaskForm.vue'
   import TaskFilter from '@/components/task/TaskFilter.vue'
   import ContributionCalendar from '@/components/contribution/ContributionCalendar.vue'
+  import AiReportModal from '@/components/ai/AiReportModal.vue'
+  import { aiApi, type ReportType } from '@/api/ai'
   import type { Task, TaskStatus, GetTaskListParams } from '@/api/task'
 
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const taskStore = useTaskStore()
 
   const isFormVisible = ref(false)
@@ -19,6 +21,16 @@
   const selectedDate = ref<string | null>(null)
   const savedFilter = ref<GetTaskListParams | null>(null)
   let restoreTimer: ReturnType<typeof setTimeout> | null = null
+
+  // 任务选择状态
+  const selectedTaskIds = ref<Set<string>>(new Set())
+
+  // AI 报告状态
+  const isAiMenuOpen = ref(false)
+  const isAiModalVisible = ref(false)
+  const aiReportType = ref<ReportType>('daily')
+  const aiPrompts = ref({ dailyPrompt: '', weeklyPrompt: '' })
+  const isAiPromptsLoaded = ref(false)
 
   onMounted(() => {
     taskStore.fetchList()
@@ -55,10 +67,23 @@
   async function handleDelete(id: string) {
     if (!window.confirm(t('task.confirmDelete'))) return
     await taskStore.deleteTask(id)
+    const next = new Set(selectedTaskIds.value)
+    next.delete(id)
+    selectedTaskIds.value = next
   }
 
   async function handlePin(id: string) {
     await taskStore.togglePin(id)
+  }
+
+  function handleSelect(id: string) {
+    const next = new Set(selectedTaskIds.value)
+    if (next.has(id)) {
+      next.delete(id)
+    } else {
+      next.add(id)
+    }
+    selectedTaskIds.value = next
   }
 
   function handleFilter(params: { status?: TaskStatus; keyword?: string; dueDateStart?: string; dueDateEnd?: string }) {
@@ -84,27 +109,53 @@
   }
 
   function handleDateSelect(date: string) {
-    // 再次点击同一格 → 立即还原
     if (selectedDate.value === date) {
       restoreSavedFilter()
       return
     }
-
-    // 首次点击：保存当前 filter，切换到日期筛选
     if (!selectedDate.value) {
       savedFilter.value = { ...taskStore.filter }
     }
-
     if (restoreTimer) clearTimeout(restoreTimer)
-
     selectedDate.value = date
     taskStore.setFilter({ createdAtDate: date })
-
-    // 1 分钟后自动还原
     restoreTimer = setTimeout(() => {
       restoreSavedFilter()
     }, 60_000)
   }
+
+  async function openAiMenu() {
+    isAiMenuOpen.value = !isAiMenuOpen.value
+  }
+
+  async function handleAiSelect(type: ReportType) {
+    isAiMenuOpen.value = false
+    aiReportType.value = type
+
+    // 首次加载 prompt
+    if (!isAiPromptsLoaded.value) {
+      const res = await aiApi.getPrompt().catch(() => ({ dailyPrompt: '', weeklyPrompt: '' }))
+      aiPrompts.value = res
+      isAiPromptsLoaded.value = true
+    }
+
+    isAiModalVisible.value = true
+  }
+
+  function handlePromptSaved(type: ReportType, prompt: string) {
+    if (type === 'daily') {
+      aiPrompts.value.dailyPrompt = prompt
+    } else {
+      aiPrompts.value.weeklyPrompt = prompt
+    }
+  }
+
+  // 当前 AI 类型对应的已保存 prompt
+  const currentPrompt = () =>
+    aiReportType.value === 'daily' ? aiPrompts.value.dailyPrompt : aiPrompts.value.weeklyPrompt
+
+  // 已选任务对象列表
+  const selectedTasks = () => taskStore.list.filter(t => selectedTaskIds.value.has(t._id))
 
   const totalPages = () => Math.ceil(taskStore.total / (taskStore.filter.pageSize ?? 10))
 </script>
@@ -149,6 +200,34 @@
           >
             {{ selectedDate }} &times;
           </span>
+
+          <!-- AI 生成按钮（有选中任务时显示） -->
+          <div
+            v-if="selectedTaskIds.size > 0"
+            class="ai-btn-wrap"
+          >
+            <button
+              class="btn btn-ai btn-sm"
+              @click="openAiMenu"
+            >
+              ✦ {{ locale === 'zh-CN' ? 'AI 生成' : 'AI Generate' }}
+              <span class="ai-badge">{{ selectedTaskIds.size }}</span>
+            </button>
+            <div
+              v-if="isAiMenuOpen"
+              class="ai-menu"
+            >
+              <button
+                class="ai-menu__item"
+                @click="handleAiSelect('daily')"
+              >{{ locale === 'zh-CN' ? '📋 日报' : '📋 Daily Report' }}</button>
+              <button
+                class="ai-menu__item"
+                @click="handleAiSelect('weekly')"
+              >{{ locale === 'zh-CN' ? '📊 周报' : '📊 Weekly Report' }}</button>
+            </div>
+          </div>
+
           <button
             class="btn btn-primary btn-sm"
             @click="openCreate"
@@ -160,22 +239,20 @@
 
       <!-- 任务列表（单行横向滚动） -->
       <div :class="['task-list-area', { 'is-loading': taskStore.isLoading }]">
-        <Transition
-          name="task-fade"
-          mode="out-in"
-        >
-          <div
-            v-if="taskStore.list.length === 0 && !taskStore.isLoading"
-            key="empty"
-            class="task-empty"
-          >
-            {{ t('task.noTasks') }}
-          </div>
-          <div
-            v-else
-            key="list"
-            class="task-row"
-          >
+        <div class="task-row">
+          <!-- 加载骨架（数量与 pageSize 对齐，撑住高度） -->
+          <template v-if="taskStore.isLoading && taskStore.list.length === 0">
+            <div
+              v-for="i in 4"
+              :key="i"
+              class="task-row__item"
+            >
+              <div class="task-skeleton card" />
+            </div>
+          </template>
+
+          <!-- 真实任务列表 -->
+          <template v-else-if="taskStore.list.length > 0">
             <div
               v-for="task in taskStore.list"
               :key="task._id"
@@ -183,13 +260,23 @@
             >
               <TaskCard
                 :task="task"
+                :is-selected="selectedTaskIds.has(task._id)"
                 @edit="openEdit"
                 @delete="handleDelete"
                 @pin="handlePin"
+                @select="handleSelect"
               />
             </div>
+          </template>
+
+          <!-- 空状态 -->
+          <div
+            v-else
+            class="task-empty"
+          >
+            {{ t('task.noTasks') }}
           </div>
-        </Transition>
+        </div>
       </div>
 
       <!-- 分页 -->
@@ -227,6 +314,16 @@
       :task="editingTask"
       @close="closeForm"
       @submit="handleFormSubmit"
+    />
+
+    <!-- AI 报告弹窗 -->
+    <AiReportModal
+      :is-visible="isAiModalVisible"
+      :type="aiReportType"
+      :tasks="selectedTasks()"
+      :initial-prompt="currentPrompt()"
+      @close="isAiModalVisible = false"
+      @prompt-saved="handlePromptSaved"
     />
   </div>
 </template>
@@ -273,6 +370,7 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: 12px;
+    min-height: 32px; // 固定高度，防止 AI 按钮出现时撑高工具栏
 
     &__count {
       font-size: 13px;
@@ -304,9 +402,66 @@
     }
   }
 
+  .ai-btn-wrap {
+    position: relative;
+  }
+
+  .btn-ai {
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: #fff;
+    border: none;
+    gap: 6px;
+
+    &:hover {
+      opacity: 0.88;
+    }
+  }
+
+  .ai-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.25);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .ai-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: #fff;
+    border: 1px solid @border-color;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    z-index: 100;
+    min-width: 140px;
+
+    &__item {
+      display: block;
+      width: 100%;
+      padding: 10px 16px;
+      text-align: left;
+      background: none;
+      border: none;
+      font-size: 13px;
+      color: @text-color;
+      cursor: pointer;
+      transition: background 0.15s;
+
+      &:hover {
+        background: @bg-color;
+      }
+    }
+  }
+
   .task-list-area {
     transition: opacity 0.25s ease;
-    min-height: 140px;
+    min-height: 140px; // 固定区域高度，防止加载前后布局抖动
 
     &.is-loading {
       opacity: 0.45;
@@ -331,7 +486,7 @@
     gap: 12px;
     overflow-x: auto;
     padding-bottom: 8px;
-    margin-bottom: 4px;
+    margin-bottom: 0;
 
     // 自定义滚动条
     &::-webkit-scrollbar {
@@ -351,7 +506,7 @@
     }
 
     &__item {
-      flex: 0 0 280px;
+      flex: 0 0 300px;
       min-width: 0;
       display: flex;
     }

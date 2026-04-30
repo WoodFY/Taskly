@@ -281,7 +281,8 @@
     &__sep {
       color: @text-secondary;
       font-size: 13px;
-      padding-bottom: 8px;
+      align-self: flex-end;
+      margin-bottom: 7px;
     }
   }
 

@@ -6,18 +6,26 @@
 
   defineProps<{
     task: Task
+    isSelected?: boolean
   }>()
 
   const emit = defineEmits<{
     edit: [task: Task]
     delete: [id: string]
     pin: [id: string]
+    select: [id: string]
   }>()
 </script>
 
 <template>
-  <div :class="['task-card', 'card', { 'is-pinned': task.isPinned }]">
+  <div :class="['task-card', 'card', { 'is-pinned': task.isPinned, 'is-selected': isSelected }]">
     <div class="task-card__header">
+      <input
+        type="checkbox"
+        class="task-card__checkbox"
+        :checked="isSelected"
+        @change.stop="emit('select', task._id)"
+      />
       <h3
         class="task-card__title"
         @click="emit('edit', task)"
@@ -101,6 +109,7 @@
     flex-direction: column;
     width: 100%;
     height: 100%;
+    padding: 20px 16px;
 
     &:hover {
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
@@ -111,12 +120,26 @@
       background-color: fade(@primary-color, 2%);
     }
 
+    &.is-selected {
+      border-color: fade(@primary-color, 30%);
+      background-color: fade(@primary-color, 2%);
+    }
+
     &__header {
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
       gap: 8px;
       margin-bottom: 8px;
+      min-height: 24px; // 固定最小高度，防止选中时撑高
+    }
+
+    &__checkbox {
+      flex-shrink: 0;
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+      accent-color: @primary-color;
     }
 
     &__title {
@@ -125,9 +148,10 @@
       cursor: pointer;
       flex: 1;
       display: -webkit-box;
-      -webkit-line-clamp: 2;
+      -webkit-line-clamp: 1;
       -webkit-box-orient: vertical;
       overflow: hidden;
+      line-height: 1.4;
 
       &:hover {
         color: @primary-color;
