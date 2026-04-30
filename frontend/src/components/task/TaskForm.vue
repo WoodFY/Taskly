@@ -233,6 +233,11 @@
       resize: vertical;
       min-height: 80px;
     }
+
+    input[type='date'].input {
+      height: 37px;
+      box-sizing: border-box;
+    }
   }
 
   .field-error {
