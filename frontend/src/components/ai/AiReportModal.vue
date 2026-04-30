@@ -31,6 +31,9 @@
   const inputEl = ref<HTMLTextAreaElement | null>(null)
   const promptSavedRef = ref(false)
   const copiedIdx = ref(-1)
+  const isPromptEditorOpen = ref(false)
+  const editingPrompt = ref('')
+  const isSavingPrompt = ref(false)
 
   watch(
     () => props.isVisible,
@@ -75,8 +78,7 @@
 
   function buildInitialMessage(): string {
     const template = props.initialPrompt || buildDefaultTemplate()
-    const section = locale.value === 'zh-CN' ? '今日处理任务列表' : 'Task list'
-    return `${template}\n\n${section}\n\n${buildMarkdownTable()}`
+    return `${template}\n\n${buildMarkdownTable()}`
   }
 
   // only {role, content} goes to AI
@@ -155,6 +157,30 @@
     setTimeout(() => {
       copiedIdx.value = -1
     }, 1500)
+  }
+
+  function openPromptEditor() {
+    editingPrompt.value = props.initialPrompt || buildDefaultTemplate()
+    isPromptEditorOpen.value = true
+  }
+
+  function closePromptEditor() {
+    isPromptEditorOpen.value = false
+  }
+
+  async function savePromptTemplate() {
+    isSavingPrompt.value = true
+    try {
+      await aiApi.savePrompt(props.type, editingPrompt.value)
+      emit('promptSaved', props.type, editingPrompt.value)
+      promptSavedRef.value = true
+      isPromptEditorOpen.value = false
+      inputText.value = `${editingPrompt.value}\n\n${buildMarkdownTable()}`
+    } catch {
+      // ignore
+    } finally {
+      isSavingPrompt.value = false
+    }
   }
 
   const typeLabel = (type: ReportType) =>
@@ -251,6 +277,36 @@
 
         <!-- Input -->
         <div class="ai-chat__composer">
+          <!-- Prompt 模版编辑面板 -->
+          <div
+            v-if="isPromptEditorOpen"
+            class="prompt-editor"
+          >
+            <div class="prompt-editor__header">
+              <span class="prompt-editor__title">{{ locale === 'zh-CN' ? 'Prompt 模版' : 'Prompt Template' }}</span>
+              <button
+                class="prompt-editor__close"
+                @click="closePromptEditor"
+              >✕</button>
+            </div>
+            <textarea
+              v-model="editingPrompt"
+              class="prompt-editor__textarea"
+              :placeholder="locale === 'zh-CN' ? '输入 Prompt 模版，任务列表将自动拼接在末尾…' : 'Enter prompt template, task list will be appended automatically…'"
+            />
+            <div class="prompt-editor__actions">
+              <button
+                class="prompt-editor__cancel"
+                @click="closePromptEditor"
+              >{{ locale === 'zh-CN' ? '取消' : 'Cancel' }}</button>
+              <button
+                class="prompt-editor__save"
+                :disabled="isSavingPrompt"
+                @click="savePromptTemplate"
+              >{{ isSavingPrompt ? '…' : (locale === 'zh-CN' ? '保存' : 'Save') }}</button>
+            </div>
+          </div>
+
           <div class="composer__box">
             <textarea
               ref="inputEl"
@@ -263,6 +319,11 @@
           </div>
           <div class="composer__footer">
             <span class="composer__hint">{{ locale === 'zh-CN' ? 'Ctrl+Enter 发送' : 'Ctrl+Enter to send' }}</span>
+            <button
+              class="composer__template"
+              :class="{ 'is-active': isPromptEditorOpen }"
+              @click="openPromptEditor"
+            >{{ locale === 'zh-CN' ? 'Prompt 模版' : 'Prompt Template' }}</button>
             <button
               class="composer__send"
               :disabled="!inputText.trim() || isLoading"
@@ -525,6 +586,29 @@
       flex: 1;
     }
 
+    &__template {
+      padding: 5px 10px;
+      border: 1px solid @border-color;
+      border-radius: 6px;
+      background: #fff;
+      font-size: 12px;
+      color: @text-secondary;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: @transition;
+
+      &:hover {
+        color: @primary-color;
+        border-color: @primary-color;
+      }
+
+      &.is-active {
+        color: @primary-color;
+        border-color: @primary-color;
+        background: fade(@primary-color, 6%);
+      }
+    }
+
     &__send {
       display: inline-flex;
       align-items: center;
@@ -556,6 +640,110 @@
   }
 
   // ── Loading dots ─────────────────────────────────────────
+
+  .prompt-editor {
+    margin-bottom: 10px;
+    border: 1.5px solid @border-color;
+    border-radius: 10px;
+    overflow: hidden;
+    background: @bg-color;
+
+    &__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-bottom: 1px solid @border-color;
+    }
+
+    &__title {
+      font-size: 12px;
+      font-weight: 600;
+      color: @text-color;
+    }
+
+    &__close {
+      background: none;
+      border: none;
+      font-size: 11px;
+      color: @text-secondary;
+      cursor: pointer;
+      padding: 2px 5px;
+      border-radius: 4px;
+      line-height: 1;
+
+      &:hover {
+        color: @text-color;
+        background: @border-color;
+      }
+    }
+
+    &__textarea {
+      display: block;
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 12px;
+      line-height: 1.65;
+      font-family: inherit;
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      color: @text-color;
+      min-height: 80px;
+      max-height: 160px;
+      overflow-y: auto;
+      box-sizing: border-box;
+
+      &::placeholder {
+        color: @text-secondary;
+      }
+    }
+
+    &__actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      padding: 8px 12px;
+      border-top: 1px solid @border-color;
+    }
+
+    &__cancel {
+      padding: 5px 12px;
+      border: 1px solid @border-color;
+      border-radius: 6px;
+      background: #fff;
+      font-size: 12px;
+      color: @text-secondary;
+      cursor: pointer;
+      transition: @transition;
+
+      &:hover {
+        color: @text-color;
+        border-color: #c7c7f0;
+      }
+    }
+
+    &__save {
+      padding: 5px 12px;
+      border: none;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      font-size: 12px;
+      color: #fff;
+      cursor: pointer;
+      transition: opacity 0.15s;
+
+      &:hover:not(:disabled) {
+        opacity: 0.88;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+  }
 
   .loading-dot {
     width: 7px;
