@@ -293,36 +293,6 @@
 
         <!-- Input -->
         <div class="ai-chat__composer">
-          <!-- Prompt 模版编辑面板 -->
-          <div
-            v-if="isPromptEditorOpen"
-            class="prompt-editor"
-          >
-            <div class="prompt-editor__header">
-              <span class="prompt-editor__title">{{ locale === 'zh-CN' ? 'Prompt 模版' : 'Prompt Template' }}</span>
-              <button
-                class="prompt-editor__close"
-                @click="closePromptEditor"
-              >✕</button>
-            </div>
-            <textarea
-              v-model="editingPrompt"
-              class="prompt-editor__textarea"
-              :placeholder="locale === 'zh-CN' ? '输入 Prompt 模版，任务列表将自动拼接在末尾…' : 'Enter prompt template, task list will be appended automatically…'"
-            />
-            <div class="prompt-editor__actions">
-              <button
-                class="prompt-editor__cancel"
-                @click="closePromptEditor"
-              >{{ locale === 'zh-CN' ? '取消' : 'Cancel' }}</button>
-              <button
-                class="prompt-editor__save"
-                :disabled="isSavingPrompt"
-                @click="savePromptTemplate"
-              >{{ isSavingPrompt ? '…' : (locale === 'zh-CN' ? '保存' : 'Save') }}</button>
-            </div>
-          </div>
-
           <div class="composer__box">
             <textarea
               ref="inputEl"
@@ -356,6 +326,38 @@
           </div>
         </div>
       </div>
+
+      <!-- Prompt 模版弹窗 -->
+      <div
+        v-if="isPromptEditorOpen"
+        class="prompt-modal"
+      >
+        <div class="prompt-modal__panel card">
+          <div class="prompt-modal__header">
+            <span class="prompt-modal__title">{{ locale === 'zh-CN' ? 'Prompt 模版' : 'Prompt Template' }}</span>
+            <button
+              class="prompt-modal__close"
+              @click="closePromptEditor"
+            >✕</button>
+          </div>
+          <textarea
+            v-model="editingPrompt"
+            class="prompt-modal__textarea"
+            :placeholder="locale === 'zh-CN' ? '输入 Prompt 模版，任务列表将自动拼接在末尾…' : 'Enter prompt template, task list will be appended automatically…'"
+          />
+          <div class="prompt-modal__actions">
+            <button
+              class="prompt-modal__cancel"
+              @click="closePromptEditor"
+            >{{ locale === 'zh-CN' ? '取消' : 'Cancel' }}</button>
+            <button
+              class="prompt-modal__save"
+              :disabled="isSavingPrompt"
+              @click="savePromptTemplate"
+            >{{ isSavingPrompt ? '…' : (locale === 'zh-CN' ? '保存' : 'Save') }}</button>
+          </div>
+        </div>
+      </div>
     </div>
   </Teleport>
 </template>
@@ -375,6 +377,7 @@
   }
 
   .ai-chat {
+    position: relative;
     width: 100%;
     max-width: 660px;
     height: 82vh;
@@ -658,23 +661,35 @@
 
   // ── Loading dots ─────────────────────────────────────────
 
-  .prompt-editor {
-    margin-bottom: 10px;
-    border: 1.5px solid @border-color;
-    border-radius: 10px;
-    overflow: hidden;
-    background: @bg-color;
+  .prompt-modal {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: inherit;
+    z-index: 10;
+
+    &__panel {
+      width: 90%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      overflow: hidden;
+    }
 
     &__header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 8px 12px;
+      padding: 12px 16px;
       border-bottom: 1px solid @border-color;
     }
 
     &__title {
-      font-size: 12px;
+      font-size: 14px;
       font-weight: 600;
       color: @text-color;
     }
@@ -682,24 +697,24 @@
     &__close {
       background: none;
       border: none;
-      font-size: 11px;
+      font-size: 13px;
       color: @text-secondary;
       cursor: pointer;
-      padding: 2px 5px;
+      padding: 3px 6px;
       border-radius: 4px;
       line-height: 1;
 
       &:hover {
         color: @text-color;
-        background: @border-color;
+        background: @bg-color;
       }
     }
 
     &__textarea {
       display: block;
       width: 100%;
-      padding: 10px 12px;
-      font-size: 12px;
+      padding: 12px 16px;
+      font-size: 13px;
       line-height: 1.65;
       font-family: inherit;
       background: transparent;
@@ -707,8 +722,8 @@
       outline: none;
       resize: none;
       color: @text-color;
-      min-height: 80px;
-      max-height: 160px;
+      min-height: 120px;
+      max-height: 240px;
       overflow-y: auto;
       box-sizing: border-box;
 
@@ -720,17 +735,17 @@
     &__actions {
       display: flex;
       justify-content: flex-end;
-      gap: 6px;
-      padding: 8px 12px;
+      gap: 8px;
+      padding: 10px 16px;
       border-top: 1px solid @border-color;
     }
 
     &__cancel {
-      padding: 5px 12px;
+      padding: 5px 14px;
       border: 1px solid @border-color;
       border-radius: 6px;
       background: #fff;
-      font-size: 12px;
+      font-size: 13px;
       color: @text-secondary;
       cursor: pointer;
       transition: @transition;
@@ -742,11 +757,11 @@
     }
 
     &__save {
-      padding: 5px 12px;
+      padding: 5px 14px;
       border: none;
       border-radius: 6px;
       background: linear-gradient(135deg, #7c3aed, #4f46e5);
-      font-size: 12px;
+      font-size: 13px;
       color: #fff;
       cursor: pointer;
       transition: opacity 0.15s;
