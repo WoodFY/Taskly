@@ -364,12 +364,14 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 3px 10px;
+    height: 26px;
+    padding: 0 10px;
     border-radius: 999px;
     background-color: fade(@primary-color, 15%);
     color: @primary-color;
     font-size: 12px;
     font-weight: 500;
+    line-height: 1;
     cursor: pointer;
     transition: @transition;
 
