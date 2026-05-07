@@ -4,14 +4,18 @@ import { Model, Types } from 'mongoose'
 import { ConfigService } from '@nestjs/config'
 import type { Response } from 'express'
 import { UserSetting, UserSettingDocument } from './schemas/user-setting.schema'
+import { AiConversation, AiConversationDocument } from './schemas/ai-conversation.schema'
 import { GenerateReportDto } from './dto/generate-report.dto'
 import { SavePromptDto } from './dto/save-prompt.dto'
+import { CreateConversationDto } from './dto/create-conversation.dto'
+import { UpdateConversationDto } from './dto/update-conversation.dto'
 import { DefaultException } from '../common/exceptions/default.exception'
 
 @Injectable()
 export class AiService {
   constructor(
     @InjectModel(UserSetting.name) private userSettingModel: Model<UserSettingDocument>,
+    @InjectModel(AiConversation.name) private conversationModel: Model<AiConversationDocument>,
     private configService: ConfigService
   ) {}
 
@@ -153,5 +157,40 @@ export class AiService {
 
     res.write('data: [DONE]\n\n')
     res.end()
+  }
+
+  async getConversations(userId: string) {
+    return this.conversationModel
+      .find({ userId: new Types.ObjectId(userId) })
+      .sort({ updatedAt: -1 })
+      .lean()
+  }
+
+  async createConversation(userId: string, dto: CreateConversationDto) {
+    const conv = await this.conversationModel.create({
+      userId: new Types.ObjectId(userId),
+      type: dto.type,
+      name: dto.name,
+      messages: dto.messages
+    })
+    return conv
+  }
+
+  async updateConversation(userId: string, id: string, dto: UpdateConversationDto) {
+    const conv = await this.conversationModel.findOneAndUpdate(
+      { _id: new Types.ObjectId(id), userId: new Types.ObjectId(userId) },
+      { ...(dto.name !== undefined && { name: dto.name }), ...(dto.messages !== undefined && { messages: dto.messages }) },
+      { new: true }
+    )
+    if (!conv) throw new DefaultException('Conversation not found')
+    return conv
+  }
+
+  async deleteConversation(userId: string, id: string) {
+    await this.conversationModel.deleteOne({
+      _id: new Types.ObjectId(id),
+      userId: new Types.ObjectId(userId)
+    })
+    return { success: true }
   }
 }
