@@ -1,7 +1,7 @@
 import { IsEnum, IsString, IsArray, ValidateNested } from 'class-validator'
 import { Type } from 'class-transformer'
 
-export class ChatMessageDto {
+class MessageEntryDto {
   @IsEnum(['user', 'assistant'])
   role: 'user' | 'assistant'
 
@@ -9,12 +9,15 @@ export class ChatMessageDto {
   content: string
 }
 
-export class GenerateReportDto {
+export class CreateConversationDto {
   @IsEnum(['daily', 'weekly', 'chat'])
   type: 'daily' | 'weekly' | 'chat'
 
+  @IsString()
+  name: string
+
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => ChatMessageDto)
-  messages: ChatMessageDto[]
+  @Type(() => MessageEntryDto)
+  messages: MessageEntryDto[]
 }

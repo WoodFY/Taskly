@@ -8,7 +8,8 @@
   import TaskFilter from '@/components/task/TaskFilter.vue'
   import ContributionCalendar from '@/components/contribution/ContributionCalendar.vue'
   import AiReportModal from '@/components/ai/AiReportModal.vue'
-  import { aiApi, type ReportType } from '@/api/ai'
+  import { aiApi } from '@/api/ai'
+  import type { ReportType } from '@/api/ai'
   import type { Task, TaskStatus, GetTaskListParams } from '@/api/task'
 
   const { t, locale } = useI18n()
@@ -26,9 +27,7 @@
   const selectedTaskIds = ref<Set<string>>(new Set())
 
   // AI 报告状态
-  const isAiMenuOpen = ref(false)
   const isAiModalVisible = ref(false)
-  const aiReportType = ref<ReportType>('daily')
   const aiPrompts = ref({ dailyPrompt: '', weeklyPrompt: '' })
   const isAiPromptsLoaded = ref(false)
 
@@ -124,21 +123,12 @@
     }, 60_000)
   }
 
-  async function openAiMenu() {
-    isAiMenuOpen.value = !isAiMenuOpen.value
-  }
-
-  async function handleAiSelect(type: ReportType) {
-    isAiMenuOpen.value = false
-    aiReportType.value = type
-
-    // 首次加载 prompt
+  async function openAiModal() {
     if (!isAiPromptsLoaded.value) {
       const res = await aiApi.getPrompt().catch(() => ({ dailyPrompt: '', weeklyPrompt: '' }))
       aiPrompts.value = res
       isAiPromptsLoaded.value = true
     }
-
     isAiModalVisible.value = true
   }
 
@@ -149,10 +139,6 @@
       aiPrompts.value.weeklyPrompt = prompt
     }
   }
-
-  // 当前 AI 类型对应的已保存 prompt
-  const currentPrompt = () =>
-    aiReportType.value === 'daily' ? aiPrompts.value.dailyPrompt : aiPrompts.value.weeklyPrompt
 
   // 已选任务对象列表
   const selectedTasks = () => taskStore.list.filter(t => selectedTaskIds.value.has(t._id))
@@ -199,31 +185,18 @@
             {{ selectedDate }} &times;
           </span>
 
-          <!-- AI 生成按钮（有选中任务时显示） -->
-          <div
-            v-if="selectedTaskIds.size > 0"
-            class="ai-btn-wrap"
-          >
+          <!-- AI 对话按钮（常驻） -->
+          <div class="ai-btn-wrap">
             <button
               class="btn btn-ai btn-sm"
-              @click="openAiMenu"
+              @click="openAiModal"
             >
-              ✦ {{ locale === 'zh-CN' ? 'AI 生成' : 'AI Generate' }}
-              <span class="ai-badge">{{ selectedTaskIds.size }}</span>
+              ✦ {{ locale === 'zh-CN' ? 'AI 对话' : 'AI Chat' }}
+              <span
+                v-if="selectedTaskIds.size > 0"
+                class="ai-badge"
+              >{{ selectedTaskIds.size }}</span>
             </button>
-            <div
-              v-if="isAiMenuOpen"
-              class="ai-menu"
-            >
-              <button
-                class="ai-menu__item"
-                @click="handleAiSelect('daily')"
-              >{{ locale === 'zh-CN' ? '📋 日报' : '📋 Daily Report' }}</button>
-              <button
-                class="ai-menu__item"
-                @click="handleAiSelect('weekly')"
-              >{{ locale === 'zh-CN' ? '📊 周报' : '📊 Weekly Report' }}</button>
-            </div>
           </div>
 
           <button
@@ -295,9 +268,8 @@
     <!-- AI 报告弹窗 -->
     <AiReportModal
       :is-visible="isAiModalVisible"
-      :type="aiReportType"
       :tasks="selectedTasks()"
-      :initial-prompt="currentPrompt()"
+      :prompts="aiPrompts"
       @close="isAiModalVisible = false"
       @prompt-saved="handlePromptSaved"
     />

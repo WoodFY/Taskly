@@ -223,3 +223,133 @@
   4. JWT 过期时间: 建议 7 天，暂不实现 Refresh Token（后续可扩展）
   5. 任务详情: 建议使用弹窗/抽屉，避免额外路由
   6. 部署: 建议前后端分离容器 + docker-compose 编排
+
+---
+
+## Feature 1: 任务置顶 & 贡献日历
+
+### 需求描述
+- 任务卡片支持置顶/取消置顶，置顶任务排列在列表最前
+- 新增贡献日历组件（类 GitHub contribution graph），按日期展示任务创建数量
+- 点击日历格子按创建日期筛选任务，再次点击或 60 秒后自动恢复
+
+### 后端变更
+- `Task Schema` 新增字段：`isPinned: boolean`、`pinnedAt?: Date`
+- 新增接口 `POST /task/toggle-pin`：切换任务置顶状态，记录 `pinnedAt`
+- 新增接口 `GET /task/contribution`：返回近一年每日任务创建数量 `Record<string, number>`
+- 任务列表排序：置顶任务优先，同级按 `createdAt` 升序
+- `GetTaskListDto` 新增 `createdAtDate?: string` 字段，按精确日期筛选
+
+### 前端变更
+- `TaskCard` 新增置顶按钮，置顶状态高亮显示
+- 新增 `ContributionCalendar.vue` 组件：SVG 渲染 52 周热力图，深色代表数量多
+- `TaskListView` 新增日期筛选状态管理：`selectedDate`、`savedFilter`，点击格子后保存当前筛选条件，恢复时还原
+
+---
+
+## Feature 2: 任务筛选增强
+
+### 需求描述
+- 任务列表支持按截止日期范围筛选（起始日期 + 结束日期）
+- 支持关键词搜索（匹配任务标题和描述）
+- 筛选器 UI 使用 pill 按钮组切换状态，搜索框带清除按钮，日期选择器带标签
+
+### 后端变更
+- `GetTaskListDto` 新增：`keyword?: string`、`dueDateStart?: string`、`dueDateEnd?: string`
+- `TaskService.getList` 支持 `$regex` 关键词搜索、`dueDate.$gte/$lte` 日期范围过滤
+
+### 前端变更
+- `TaskFilter.vue` 重构：状态 pill 组 + 搜索框 + 日期范围选择器 + 重置按钮
+- 日期输入框锁定 `width` 和 `height`，防止选择日期时布局抖动
+
+---
+
+## Feature 3: AI 报告生成
+
+### 需求描述
+- 用户可多选任务卡片，点击「AI 生成」按钮选择日报或周报
+- 弹出 AI 聊天窗口，预填充 Prompt + 任务 Markdown 表格，支持流式输出
+- 支持多轮对话、消息复制、错误重试
+- 支持自定义 Prompt 模版，存储至数据库，下次打开自动填充
+
+### 后端变更
+- 新增 `AiModule`，接口路径 `/ai`
+- `POST /ai/generate-stream`：接收 `type`、`messages[]`，调用 LLM，SSE 流式返回
+- `GET /ai/prompt`：获取用户保存的 Prompt 模版（`dailyPrompt`、`weeklyPrompt`）
+- `POST /ai/save-prompt`：保存用户自定义 Prompt 模版至数据库
+- 新增 `AiPrompt Schema`：`userId`、`dailyPrompt`、`weeklyPrompt`
+
+### 前端变更
+- `TaskCard` 新增 checkbox 多选，`TaskListView` 工具栏显示已选数量
+- 新增 `AiReportModal.vue`：聊天气泡布局，SSE 流式渲染，支持 Ctrl+Enter 发送
+- 输入框自动根据内容高度伸缩，带动画过渡（`transition: height 0.25s ease`）
+- 新增「Prompt 模版」按钮，点击弹出独立编辑弹窗，保存后立即更新输入框内容
+- AI 弹窗仅点击关闭按钮关闭，点击遮罩层不关闭
+
+---
+
+## Feature 4: 任务列表 UI 优化
+
+### 需求描述
+- 任务卡片横向单行滚动排列，固定高度，不受内容影响
+- 移除分页，后端返回全量任务（不传 `pageSize` 时无限制）
+- 统一工具栏按钮高度，消除布局抖动
+
+### 变更内容
+- 引入 Less 变量 `@task-card-height: 110px` 作为单一来源，卡片、骨架屏、行高均派生于此
+- `.task-row` 使用固定 `height: @task-card-height + 18px`，配合 `overflow-y: hidden` 防止抖动
+- 任务描述固定单行显示（`height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis`）
+- `btn-sm` 统一 `height: 26px`，日期筛选 chip 同步对齐
+- 后端 `pageSize` 不传时跳过 `.limit()`，返回全部数据
+- 前端 store 不再发送 `pageSize`
+
+---
+
+## Feature 5: AI 对话历史
+
+### 1. 数据模型（新增 `AiConversation` 集合）
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `_id` | ObjectId | 主键 |
+| `userId` | ObjectId | 关联用户 |
+| `type` | `'daily' \| 'weekly'` | 报告类型 |
+| `name` | string | 对话名，默认格式 `YYYYMMDD-日报-HHMM` |
+| `messages` | `{role, content}[]` | 完整对话消息列表 |
+| `createdAt` | Date | 创建时间 |
+| `updatedAt` | Date | 最后更新时间 |
+
+### 2. 后端接口（新增 `/ai/conversations`）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| `GET` | `/ai/conversations` | 获取当前用户所有对话（按 `updatedAt` 倒序） |
+| `POST` | `/ai/conversations` | 创建新对话（传入 `type`、`name`、`messages`） |
+| `PATCH` | `/ai/conversations/:id` | 更新对话（修改名称 或 追加消息） |
+| `DELETE` | `/ai/conversations/:id` | 删除对话 |
+
+### 3. 前端 UI 变化
+
+#### 弹窗布局
+- 弹窗最大宽度：`660px → 960px`
+- 新增左侧栏（宽 `220px`），右侧保留现有聊天区域
+
+#### 左侧栏内容
+- 顶部「新建对话」按钮
+- 对话列表，每项显示：
+  - 对话名（可点击切换）
+  - 悬浮出现「重命名 ✎」和「删除 🗑」操作
+- 当前激活对话高亮
+
+#### 对话名称规则
+- 自动生成格式：`YYYYMMDD-日报-HHMM`（中文）/ `YYYYMMDD-Daily-HHMM`（英文）
+- 点击重命名后原地变为输入框，回车或失焦保存
+
+#### 交互逻辑
+- **打开弹窗**：自动创建一条新对话（不立即存库，首次发送后保存）
+- **发送消息**：追加到当前对话的 `messages` 并同步到后端
+- **切换历史对话**：加载该对话的 `messages` 渲染到聊天区，`inputText` 清空
+- **删除对话**：确认后删除，若删除的是当前对话则自动新建一条
+
+### 4. 分支名
+`feature/ai-conversation-history`

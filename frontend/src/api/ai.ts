@@ -1,6 +1,7 @@
 import http from './http'
 
 export type ReportType = 'daily' | 'weekly'
+export type ConvType = 'daily' | 'weekly' | 'chat'
 
 export interface AiPrompts {
   dailyPrompt: string
@@ -12,17 +13,27 @@ export interface ChatMessage {
   content: string
 }
 
+export interface AiConversation {
+  _id: string
+  userId: string
+  type: ConvType
+  name: string
+  messages: ChatMessage[]
+  createdAt: string
+  updatedAt: string
+}
+
 const baseURL = () => (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:3000'
 const token = () => localStorage.getItem('accessToken') ?? ''
 
 export const aiApi = {
   getPrompt: () => http.post<any, AiPrompts>('/ai/get-prompt'),
   savePrompt: (type: ReportType, prompt: string) => http.post('/ai/save-prompt', { type, prompt }),
-  generate: (type: ReportType, messages: ChatMessage[]) =>
+  generate: (type: ConvType, messages: ChatMessage[]) =>
     http.post<any, { content: string }>('/ai/generate', { type, messages }),
 
   generateStream: async (
-    type: ReportType,
+    type: ConvType,
     messages: ChatMessage[],
     onChunk: (content: string) => void,
     signal?: AbortSignal
@@ -70,5 +81,12 @@ export const aiApi = {
         }
       }
     }
-  }
+  },
+
+  getConversations: () => http.get<any, AiConversation[]>('/ai/conversations'),
+  createConversation: (data: { type: ConvType; name: string; messages: ChatMessage[] }) =>
+    http.post<any, AiConversation>('/ai/conversations', data),
+  updateConversation: (id: string, data: { name?: string; messages?: ChatMessage[] }) =>
+    http.patch<any, AiConversation>(`/ai/conversations/${id}`, data),
+  deleteConversation: (id: string) => http.delete<any, { success: boolean }>(`/ai/conversations/${id}`)
 }
