@@ -156,8 +156,6 @@
 
   // 已选任务对象列表
   const selectedTasks = () => taskStore.list.filter(t => selectedTaskIds.value.has(t._id))
-
-  const totalPages = () => Math.ceil(taskStore.total / (taskStore.filter.pageSize ?? 10))
 </script>
 
 <template>
@@ -277,28 +275,6 @@
             {{ t('task.noTasks') }}
           </div>
         </div>
-      </div>
-
-      <!-- 分页 -->
-      <div
-        v-if="totalPages() > 1"
-        class="pagination"
-      >
-        <button
-          class="btn btn-secondary btn-sm"
-          :disabled="taskStore.filter.page === 1"
-          @click="taskStore.setPage((taskStore.filter.page ?? 1) - 1)"
-        >
-          {{ t('pagination.prev') }}
-        </button>
-        <span class="pagination__info">{{ taskStore.filter.page }} / {{ totalPages() }}</span>
-        <button
-          class="btn btn-secondary btn-sm"
-          :disabled="taskStore.filter.page === totalPages()"
-          @click="taskStore.setPage((taskStore.filter.page ?? 1) + 1)"
-        >
-          {{ t('pagination.next') }}
-        </button>
       </div>
 
       <!-- Contribution 日历 -->
@@ -535,18 +511,5 @@
   @keyframes skeleton-shimmer {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
-  }
-
-  .pagination {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    margin-top: 12px;
-
-    &__info {
-      font-size: 13px;
-      color: @text-secondary;
-    }
   }
 </style>

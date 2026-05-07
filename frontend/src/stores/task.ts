@@ -7,7 +7,7 @@ export const useTaskStore = defineStore('task', () => {
   const total = ref(0)
   const isLoading = ref(false)
   const stats = ref<TaskStats>({ total: 0, completed: 0, completionRate: 0 })
-  const filter = ref<GetTaskListParams>({ page: 1, pageSize: 10 })
+  const filter = ref<GetTaskListParams>({ page: 1, pageSize: 1000 })
 
   async function fetchList() {
     isLoading.value = true
@@ -41,20 +41,15 @@ export const useTaskStore = defineStore('task', () => {
     fetchList()
   }
 
-  function setPage(page: number) {
-    filter.value = { ...filter.value, page }
-    fetchList()
-  }
-
   async function togglePin(id: string) {
     await taskApi.togglePin(id)
     await fetchList()
   }
 
   function resetFilter() {
-    filter.value = { page: 1, pageSize: 10 }
+    filter.value = { page: 1, pageSize: 1000 }
     fetchList()
   }
 
-  return { list, total, isLoading, stats, filter, fetchList, createTask, updateTask, deleteTask, togglePin, setFilter, setPage, resetFilter }
+  return { list, total, isLoading, stats, filter, fetchList, createTask, updateTask, deleteTask, togglePin, setFilter, resetFilter }
 })
