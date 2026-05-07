@@ -7,7 +7,7 @@ export const useTaskStore = defineStore('task', () => {
   const total = ref(0)
   const isLoading = ref(false)
   const stats = ref<TaskStats>({ total: 0, completed: 0, completionRate: 0 })
-  const filter = ref<GetTaskListParams>({ page: 1, pageSize: 1000 })
+  const filter = ref<GetTaskListParams>({ page: 1 })
 
   async function fetchList() {
     isLoading.value = true
@@ -47,7 +47,7 @@ export const useTaskStore = defineStore('task', () => {
   }
 
   function resetFilter() {
-    filter.value = { page: 1, pageSize: 1000 }
+    filter.value = { page: 1 }
     fetchList()
   }
 

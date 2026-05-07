@@ -13,7 +13,7 @@ export class GetTaskListDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  pageSize?: number = 10
+  pageSize?: number
 
   @IsOptional()
   @IsEnum(TaskStatus)

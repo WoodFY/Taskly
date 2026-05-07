@@ -19,7 +19,7 @@ export class TaskService {
   }
 
   async getList(userId: string, dto: GetTaskListDto) {
-    const { page = 1, pageSize = 10, status, keyword, dueDateStart, dueDateEnd, createdAtDate } = dto
+    const { page = 1, pageSize, status, keyword, dueDateStart, dueDateEnd, createdAtDate } = dto
 
     const filter: any = {
       userId: new Types.ObjectId(userId),
@@ -49,11 +49,13 @@ export class TaskService {
     }
 
     const total = await this.taskModel.countDocuments(filter)
-    const list = await this.taskModel
+    const query = this.taskModel
       .find(filter)
       .sort({ isPinned: -1, pinnedAt: 1, createdAt: 1 }) // 置顶优先，非置顶按创建时间升序
-      .skip((page - 1) * pageSize)
-      .limit(pageSize)
+    if (pageSize) {
+      query.skip((page - 1) * pageSize).limit(pageSize)
+    }
+    const list = await query
 
     const stats = await this.taskModel.aggregate([
       { $match: { userId: new Types.ObjectId(userId), deletedAt: null } },
