@@ -42,6 +42,7 @@
       messages.value = []
       promptSavedRef.value = !!props.initialPrompt
       inputText.value = buildInitialMessage()
+      nextTick(autoResize)
     }
   )
 
@@ -95,6 +96,18 @@
     }
   }
 
+  function autoResize() {
+    const el = inputEl.value
+    if (!el) return
+    const current = el.offsetHeight
+    el.style.height = 'auto'
+    const target = Math.max(Math.min(el.scrollHeight, 200), 88)
+    el.style.height = current + 'px'
+    requestAnimationFrame(() => {
+      el.style.height = target + 'px'
+    })
+  }
+
   async function sendMessage(text: string) {
     if (!text.trim() || isLoading.value) return
 
@@ -107,6 +120,8 @@
 
     messages.value.push({ role: 'user', content: text })
     inputText.value = ''
+    await nextTick()
+    autoResize()
     isLoading.value = true
     await scrollToBottom()
 
@@ -176,6 +191,8 @@
       promptSavedRef.value = true
       isPromptEditorOpen.value = false
       inputText.value = `${editingPrompt.value}\n\n${buildMarkdownTable()}`
+      await nextTick()
+      autoResize()
     } catch {
       // ignore
     } finally {
@@ -194,7 +211,6 @@
     <div
       v-if="isVisible"
       class="modal-overlay"
-      @click.self="emit('close')"
     >
       <div class="ai-chat card">
         <!-- Header -->
@@ -314,6 +330,7 @@
               class="composer__textarea"
               :disabled="isLoading"
               :placeholder="locale === 'zh-CN' ? '输入消息…' : 'Type a message…'"
+              @input="autoResize"
               @keydown="handleKeydown"
             />
           </div>
@@ -559,9 +576,9 @@
       outline: none;
       resize: none;
       color: @text-color;
-      min-height: 88px;
-      max-height: 200px;
+      height: 88px;
       overflow-y: auto;
+      transition: height 0.25s ease;
 
       &::placeholder {
         color: @text-secondary;
