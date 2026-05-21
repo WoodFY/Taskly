@@ -17,11 +17,11 @@
     dueDateEnd: ''
   })
 
-  const statusTabs: Array<{ value: TaskStatus | ''; label: string }> = [
-    { value: '', label: t('filter.allStatus') },
-    { value: 'pending', label: t('task.status_pending') },
-    { value: 'in_progress', label: t('task.status_in_progress') },
-    { value: 'completed', label: t('task.status_completed') }
+  const statusTabs: Array<{ value: TaskStatus | ''; i18nKey: string }> = [
+    { value: '', i18nKey: 'filter.allStatus' },
+    { value: 'pending', i18nKey: 'task.status_pending' },
+    { value: 'in_progress', i18nKey: 'task.status_in_progress' },
+    { value: 'completed', i18nKey: 'task.status_completed' }
   ]
 
   function selectStatus(value: TaskStatus | '') {
@@ -59,7 +59,7 @@
         :class="['status-tab', `status-tab--${tab.value || 'all'}`, { 'is-active': isActive(tab.value) }]"
         @click="selectStatus(tab.value)"
       >
-        {{ tab.label }}
+        {{ t(tab.i18nKey) }}
       </button>
     </div>
 
@@ -141,7 +141,7 @@
     &__status-group {
       display: flex;
       gap: 6px;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
     }
 
     &__controls {
@@ -158,6 +158,9 @@
     border-radius: 9999px;
     font-size: 13px;
     font-weight: 500;
+    line-height: 20px;
+    height: 32px;
+    box-sizing: border-box;
     border: 1px solid @border-color;
     background-color: #fff;
     color: @text-secondary;
