@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common'
 import { InjectModel } from '@nestjs/mongoose'
 import { Model, Types } from 'mongoose'
-import { ConfigService } from '@nestjs/config'
 import type { Response } from 'express'
+import { HumanMessage, AIMessage } from '@langchain/core/messages'
+import { trimMessages } from '@langchain/core/messages'
+
 import { UserSetting, UserSettingDocument } from './schemas/user-setting.schema'
 import { AiConversation, AiConversationDocument } from './schemas/ai-conversation.schema'
 import { GenerateReportDto } from './dto/generate-report.dto'
@@ -10,13 +12,14 @@ import { SavePromptDto } from './dto/save-prompt.dto'
 import { CreateConversationDto } from './dto/create-conversation.dto'
 import { UpdateConversationDto } from './dto/update-conversation.dto'
 import { DefaultException } from '../common/exceptions/default.exception'
+import { LlmFactory } from './llm.factory'
 
 @Injectable()
 export class AiService {
   constructor(
     @InjectModel(UserSetting.name) private userSettingModel: Model<UserSettingDocument>,
     @InjectModel(AiConversation.name) private conversationModel: Model<AiConversationDocument>,
-    private configService: ConfigService
+    private llmFactory: LlmFactory
   ) {}
 
   async getPrompt(userId: string) {
@@ -37,126 +40,81 @@ export class AiService {
     return { success: true }
   }
 
+  private toLangChainMessages(messages: { role: string, content: string }[]) {
+    // 将 DTO 中的消息（{role, content} 格式）转换为 LangChain 的标准消息格式
+    return messages.map((msg) => {
+      if (msg.role === 'user') {
+        return new HumanMessage(msg.content)
+      } else {
+        return new AIMessage(msg.content)
+      }
+    })
+  }
+
   async generate(userId: string, dto: GenerateReportDto) {
-    const baseUrl = this.configService.get<string>('AI_BASE_URL')
-    const apiKey = this.configService.get<string>('AI_API_KEY')
-    const model = this.configService.get<string>('AI_MODEL')
+    // 创建模型实例
+    const model = dto.type === 'chat'
+      ? this.llmFactory.createForChat()
+      : this.llmFactory.createForReport()
 
-    if (!baseUrl || !apiKey || !model) {
-      throw new DefaultException('AI service not configured')
-    }
+    const langChainMessages = this.toLangChainMessages(dto.messages)
 
-    const typeLabel = dto.type === 'daily' ? '日报' : '周报'
-
-    const response = await fetch(baseUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model,
-        messages: dto.messages,
-        max_tokens: 2048,
-        temperature: 0.7
-      })
+    // 对消息进行修剪以适应模型的上下文窗口
+    const trimmedMessages = await trimMessages(langChainMessages, {
+      maxTokens: 6000,
+      strategy: 'last', // 保留最后的消息
+      tokenCounter: model,  // 使用模型自身的 tokenizer 来计算 token 数
+      startOn: 'human'  // 从最后一个 human message 开始保留消息，确保上下文的连续性
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new DefaultException(`AI request failed: ${errorText}`)
+    // 调用 LLM 生成内容
+    try {
+      // const response = await model.invoke(langChainMessages)
+      const response = await model.invoke(trimmedMessages)
+      const content = typeof response.content === 'string'
+        ? response.content
+        : (response.content as any[]).map(
+          // 处理多模态的 content（LangChain 返回类型是联合类型）
+          c => typeof c === 'object' && 'text' in c ? c.text : ''
+        ).join('')
+      
+      return { content }
+    } catch (error) {
+      throw new DefaultException('AI request failed: ${(error as Error).message}')
     }
-
-    const data = (await response.json()) as any
-    const content = data?.choices?.[0]?.message?.content
-
-    if (!content) {
-      throw new DefaultException(`AI returned empty ${typeLabel}`)
-    }
-
-    return { content }
   }
 
   async generateStream(userId: string, dto: GenerateReportDto, res: Response) {
-    const baseUrl = this.configService.get<string>('AI_BASE_URL')
-    const apiKey = this.configService.get<string>('AI_API_KEY')
-    const model = this.configService.get<string>('AI_MODEL')
+    // 创建模型实例
+    const model = dto.type === 'chat'
+      ? this.llmFactory.createForChat()
+      : this.llmFactory.createForReport()
 
-    const writeError = (msg: string) => {
-      res.write(`data: ${JSON.stringify({ error: msg })}\n\n`)
-      res.end()
-    }
+    const langChainMessages = this.toLangChainMessages(dto.messages)
 
-    if (!baseUrl || !apiKey || !model) {
-      return writeError('AI service not configured')
-    }
-
-    let aiResponse: globalThis.Response
+    // 调用 LLM 生成内容（流式）
     try {
-      aiResponse = await fetch(baseUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model,
-          messages: dto.messages,
-          max_tokens: 2048,
-          temperature: 0.7,
-          stream: true
-        })
-      })
-    } catch (err) {
-      return writeError(`Network error: ${String(err)}`)
-    }
+      const stream = await model.stream(langChainMessages)
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text().catch(() => `HTTP ${aiResponse.status}`)
-      return writeError(errorText)
-    }
+      for await (const chunk of stream) {
+        const text = typeof chunk.content === 'string'
+          ? chunk.content
+          : (chunk.content as any[]).map(c => 
+            typeof c === 'object' && 'text' in c ? c.text : ''
+          ).join('')
 
-    const reader = aiResponse.body!.getReader()
-    const decoder = new TextDecoder()
-    let buffer = ''
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() ?? ''
-
-        for (const line of lines) {
-          const trimmed = line.trim()
-          if (!trimmed.startsWith('data: ')) continue
-
-          const data = trimmed.slice(6)
-          if (data === '[DONE]') {
-            res.write('data: [DONE]\n\n')
-            res.end()
-            return
-          }
-
-          try {
-            const parsed = JSON.parse(data)
-            const content = parsed.choices?.[0]?.delta?.content
-            if (content) {
-              res.write(`data: ${JSON.stringify({ content })}\n\n`)
-            }
-          } catch {
-            // skip malformed chunk
-          }
+        if (text) {
+          res.write(`data: ${JSON.stringify({ content: text })}\n\n`)
         }
       }
-    } catch (err) {
-      return writeError(`Stream error: ${String(err)}`)
-    }
 
-    res.write('data: [DONE]\n\n')
-    res.end()
+      res.write('data: [DONE]\n\n')
+      res.end()
+
+    } catch (error) {
+      res.write(`data: ${JSON.stringify({ error: `Stream error: ${(error as Error).message}` })}\n\n`)
+      res.end()
+    }
   }
 
   async getConversations(userId: string) {
